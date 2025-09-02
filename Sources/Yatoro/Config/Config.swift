@@ -3,6 +3,7 @@ import Logging
 import SwiftNotCurses
 import Yams
 
+/// Main configuration structure for the application
 public struct Config {
 
     @MainActor public static var shared: Config = .init()
@@ -21,6 +22,7 @@ public struct Config {
 
 }
 
+// Configuration argument processing extension
 public extension Config {
 
     @MainActor static internal func applyArgumentOptions(

@@ -3,6 +3,7 @@ import Logging
 import SwiftNotCurses
 import notcurses
 
+/// Input queue for handling key mappings and command history
 @MainActor
 public class InputQueue {
 
@@ -14,6 +15,8 @@ public class InputQueue {
 
     private let queue: BlockingQueue<Input> = .init()
 
+    // MARK: - Command History Properties
+    
     private var commandHistoryActive: Bool {
         commandHistoryIndex != nil
     }
@@ -21,12 +24,16 @@ public class InputQueue {
     private var currentCommandHistory: [String] = []
     private var commandHistoryIndex: Int?
 
+    // MARK: - Command Completion Properties
+    
     public var commandCompletionsActive: Bool {
         currentCompletionCommandIndex != nil
     }
     public var completionCommands: [String] = []
     public var currentCompletionCommandIndex: Int?
 
+    // MARK: - Input Management
+    
     public func add(_ newInput: Input) {
         Task {
             await queue.enqueue(newInput)

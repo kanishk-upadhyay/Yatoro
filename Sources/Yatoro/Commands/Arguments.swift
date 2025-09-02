@@ -1,6 +1,7 @@
 import ArgumentParser
 import MusicKit
 
+/// Extension to make SearchType work with ArgumentParser flags
 extension SearchType: EnumerableFlag {
 
     public static func name(for value: SearchType) -> NameSpecification {
@@ -30,6 +31,7 @@ extension SearchType: EnumerableFlag {
 
 }
 
+/// Enum representing different types of music items that can be searched
 public enum MusicItemType: Hashable, CaseIterable, Sendable, ExpressibleByArgument {
 
     case song
@@ -51,6 +53,7 @@ public enum MusicItemType: Hashable, CaseIterable, Sendable, ExpressibleByArgume
 
 }
 
+/// Extension to make EntryInsertionPosition work with ArgumentParser
 extension ApplicationMusicPlayer.Queue.EntryInsertionPosition:
     @retroactive ExpressibleByArgument
 {
@@ -64,8 +67,10 @@ extension ApplicationMusicPlayer.Queue.EntryInsertionPosition:
     }
 }
 
+/// Enum for parsing search item indices from command arguments
 enum SearchItemIndex: ExpressibleByArgument {
 
+    /// Represents a single index that can be a number, letter, or combination
     struct Index: CustomStringConvertible {
 
         var description: String {
@@ -127,7 +132,7 @@ enum SearchItemIndex: ExpressibleByArgument {
         // SOME
         var indices: [Index] = []
         for arg in arguments {
-            guard arg.count > 0 else {
+            guard !arg.isEmpty else {
                 continue
             }
             let index = Index(from: String(arg))
@@ -137,6 +142,7 @@ enum SearchItemIndex: ExpressibleByArgument {
     }
 }
 
+/// Extension to make RepeatMode work with ArgumentParser
 extension MusicPlayer.RepeatMode: @retroactive ExpressibleByArgument {
 
     public init?(argument: String) {
@@ -150,6 +156,7 @@ extension MusicPlayer.RepeatMode: @retroactive ExpressibleByArgument {
 
 }
 
+/// Extension to make ShuffleMode work with ArgumentParser
 extension MusicPlayer.ShuffleMode: @retroactive ExpressibleByArgument {
 
     public init?(argument: String) {

@@ -3,6 +3,7 @@ import Logging
 import MusicKit
 import SwiftNotCurses
 
+// Command line logging options
 struct LoggingArgOptions: ParsableArguments {
     @Option(
         name: .shortAndLong,
@@ -19,6 +20,7 @@ struct LoggingArgOptions: ParsableArguments {
     var ncLogLevel: UILogLevel?
 }
 
+// Command line settings options
 struct SettingsArgOptions: ParsableArguments {
 
     @Flag(
@@ -107,6 +109,7 @@ struct UIArgOptions: ParsableArguments {
 
 }
 
+/// Main Yatoro application command
 @main
 struct Yatoro: AsyncParsableCommand {
 

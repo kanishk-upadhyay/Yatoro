@@ -2,6 +2,7 @@ import Foundation
 import Logging
 import SwiftNotCurses
 
+/// Main UI manager for the terminal interface
 @MainActor
 public class UI {
 
@@ -19,6 +20,8 @@ public class UI {
 
     private let frameDelay: UInt64
 
+    // MARK: - Initialization
+    
     public init() async {
 
         var flags: [UIOptionFlag] = [
@@ -97,7 +100,12 @@ public class UI {
 
             UI.notcurses?.render()
 
-            try! await Task.sleep(nanoseconds: frameDelay)
+            do {
+                try await Task.sleep(nanoseconds: frameDelay)
+            } catch {
+                // If task is cancelled or interrupted, exit gracefully
+                break
+            }
         }
 
         await stop()

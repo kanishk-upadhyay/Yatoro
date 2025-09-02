@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Yatoro}",
+            "name": "Debug yatoro",
+            "program": "${workspaceFolder:Yatoro}/.build/debug/yatoro",
+            "preLaunchTask": "swift: Build Debug yatoro"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Yatoro}",
+            "name": "Release yatoro",
+            "program": "${workspaceFolder:Yatoro}/.build/release/yatoro",
+            "preLaunchTask": "swift: Build Release yatoro"
+        }
+    ]
+}

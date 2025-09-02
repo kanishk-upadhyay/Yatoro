@@ -1,5 +1,6 @@
 import SwiftNotCurses
 
+/// Key mapping structure for binding keys to actions
 public struct Mapping: Codable {
 
     public var key: String
@@ -8,6 +9,8 @@ public struct Mapping: Codable {
 
     public var remap: Bool = false
 
+    // MARK: - Initializers
+    
     public init(_ key: String, mod: [Input.Modifier]?, action: String) {
         self.key = key
         self.modifiers = mod

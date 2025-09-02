@@ -1,11 +1,13 @@
 import Foundation
 
+/// Actor-based blocking queue implementation for thread-safe operations
 public actor BlockingQueue<T: Sendable> {
     private var queue = [T]()
     private var continuations: [CheckedContinuation<T, Never>] = []
 
     public init() {}
 
+    /// Enqueue an element, immediately resolving waiting dequeuers if any
     public func enqueue(_ element: T) {
         if !continuations.isEmpty {
             let continuation = continuations.removeFirst()
@@ -15,6 +17,7 @@ public actor BlockingQueue<T: Sendable> {
         }
     }
 
+    /// Dequeue an element, blocking until one is available
     public func dequeue() async -> T {
         if !queue.isEmpty {
             return queue.removeFirst()

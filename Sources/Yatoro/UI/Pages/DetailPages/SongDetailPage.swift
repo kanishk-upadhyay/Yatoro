@@ -161,7 +161,7 @@ public class SongDetailPage: DestroyablePage {
 
     private func loadArtists() {
         if let artists = songDescription.artists {
-            if artists.count > 0 {
+            if !artists.isEmpty {
                 self.artistsIndicesPlane = Plane(
                     in: plane,
                     state: .init(

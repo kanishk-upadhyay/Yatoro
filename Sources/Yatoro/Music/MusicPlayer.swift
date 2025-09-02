@@ -3,20 +3,26 @@ import Logging
 import MediaPlayer
 @preconcurrency import MusicKit
 
+// Type alias for the main player manager
 public typealias Player = AudioPlayerManager
 
+// Type aliases for search result types
 public typealias LibraryTopResult = MusicLibrarySearchResponse.TopResult
 public typealias CatalogTopResult = MusicCatalogSearchResponse.TopResult
 
+// Extensions to add searchability conformance
 extension CatalogTopResult: @retroactive MusicCatalogSearchable {}
 extension LibraryTopResult: @retroactive MusicLibrarySearchable {}
 
+/// Main audio player manager for handling music playback
 public final class AudioPlayerManager: Sendable {
 
     @MainActor static let shared = AudioPlayerManager()
 
     public let player = ApplicationMusicPlayer.shared
 
+    // MARK: - Queue Management
+    
     public var queue: ApplicationMusicPlayer.Queue.Entries {
         guard let currentEntry = player.queue.currentEntry else {
             return player.queue.entries

@@ -1,5 +1,6 @@
 import ArgumentParser
 
+/// Command for searching music items in various sources (catalog, library, etc.)
 struct SearchCommand: AsyncParsableCommand {
 
     @Flag(exclusivity: .exclusive)
@@ -38,7 +39,7 @@ struct SearchCommand: AsyncParsableCommand {
             for part in command.searchPhrase {
                 searchPhrase.append("\(part) ")
             }
-            if searchPhrase.count > 0 {
+            if !searchPhrase.isEmpty {
                 searchPhrase.removeLast()
             }
             let limit = Config.shared.settings.searchItemLimit

@@ -42,6 +42,18 @@ public struct Command: Sendable {
         .init(name: "closeAll", short: "ca", action: .closeAll),
         .init(name: "help", short: "h", action: nil), // Help command, handled specially
     ]
+    
+    // Performance optimization: O(1) command lookup
+    internal static let commandLookup: [String: Command] = {
+        var lookup: [String: Command] = [:]
+        for command in defaultCommands {
+            lookup[command.name] = command
+            if let shortName = command.shortName {
+                lookup[shortName] = command
+            }
+        }
+        return lookup
+    }()
 
     @MainActor
     public static func parseCommand(_ commandString: String) async {
@@ -50,20 +62,15 @@ public struct Command: Sendable {
             logger?.debug("Empty command entered")
             return
         }
-        guard
-            let command = defaultCommands.first(where: { cmd in
-                if let short = cmd.shortName {
-                    return short == commandString || cmd.name == commandString
-                }
-                return cmd.name == commandString
-            })
-        else {
-            let msg = "Unknown command \"\(commandString)\""
-            await CommandInput.shared.setLastCommandOutput(msg)
-            logger?.debug(msg)
+        
+        // Use O(1) lookup for performance
+        guard let command = commandLookup[String(commandString)] else {
+            logger?.debug("Command '\(commandString)' not found")
+            await CommandInput.shared.setLastCommandOutput("Command '\(commandString)' not found")
             return
         }
-        let arguments = Array(commandParts.dropFirst().map(String.init))
+        
+        let arguments = commandParts.dropFirst().map(String.init)
         
         // Handle help command specially
         if command.name == "help" {
@@ -72,9 +79,8 @@ public struct Command: Sendable {
         }
         
         guard let action = command.action else {
-            let msg = "Command \"\(command.name)\" doesn't have any action."
-            await CommandInput.shared.setLastCommandOutput(msg)
-            logger?.debug(msg)
+            logger?.debug("Command '\(command.name)' has no action defined")
+            await CommandInput.shared.setLastCommandOutput("Command '\(command.name)' has no action defined")
             return
         }
         switch action {

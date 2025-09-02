@@ -382,7 +382,7 @@ public class NowPlayingPage: DestroyablePage {
             )
         } else {
             controlsPlane.putString(
-                "◀◀   ▶   ▶▶",
+                "◀◀   ?   ▶▶",
                 at: (0, 0)
             )
         }
