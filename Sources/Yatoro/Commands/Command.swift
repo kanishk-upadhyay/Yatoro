@@ -55,7 +55,7 @@ public struct Command: Sendable {
         return lookup
     }()
 
-    @MainActor
+        @MainActor
     public static func parseCommand(_ commandString: String) async {
         let commandParts = Array(commandString.split(separator: " "))
         guard let commandString = commandParts.first else {

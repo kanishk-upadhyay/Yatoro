@@ -51,7 +51,7 @@ public class HelpPage: DestroyablePage {
         renderHelpContent()
     }
 
-    public func getMinDimensions() async -> (width: UInt32, height: UInt32) { (50, 20) }
+    public func getMinDimensions() async -> (width: UInt32, height: UInt32) { (40, 15) }
 
     public func getMaxDimensions() async -> (width: UInt32, height: UInt32)? { nil }
 
@@ -159,55 +159,34 @@ public class HelpPage: DestroyablePage {
     private func renderHelpContent() {
         contentPlane.erase()
         
-        let width = Int(contentPlane.width)
-        let midPoint = width / 2
-        
         var row: Int32 = 0
         
-        // Title
-        contentPlane.putString("Yatoro Help - Commands and Key Bindings", at: (0, row))
+                // Title
+        contentPlane.putString("Yatoro Help - Available Commands", at: (0, row))
         row += 2
         
-        // Column headers
+        // Header
         contentPlane.putString("COMMANDS:", at: (0, row))
-        contentPlane.putString("KEY BINDINGS:", at: (Int32(midPoint), row))
         row += 1
-        
         contentPlane.putString("=========", at: (0, row))
-        contentPlane.putString("=============", at: (Int32(midPoint), row))
         row += 1
         
-        // Generate commands and key bindings
+        // Generate commands list
         let commands = Command.defaultCommands.sorted(by: { $0.name < $1.name })
-        let mappings = Mapping.defaultMappings.sorted(by: { $0.key < $1.key })
         
-        let maxRows = min(max(commands.count, mappings.count), 15) // Limit for testing
+        let maxRows = min(commands.count, Int(contentPlane.height) - 8) // Leave space for header and footer
         
         for i in 0..<maxRows {
-            // Left column - Commands
-            if i < commands.count {
-                let command = commands[i]
-                let shortName = command.shortName ?? ""
-                let nameWithShort = shortName.isEmpty ? command.name : "\(command.name) (\(shortName))"
-                let commandText = ":\(nameWithShort)"
-                contentPlane.putString(commandText, at: (0, row))
-            }
-            
-            // Right column - Key bindings
-            if i < mappings.count {
-                let mapping = mappings[i]
-                let modStr = mapping.modifiers?.map { $0.rawValue.capitalized }.joined(separator: "+") ?? ""
-                let keyDisplay = modStr.isEmpty ? mapping.key : "\(modStr)+\(mapping.key)"
-                let actionClean = mapping.action.replacingOccurrences(of: "<CR>", with: "").replacingOccurrences(of: ":", with: "")
-                let bindingText = "\(keyDisplay) → \(actionClean)"
-                contentPlane.putString(bindingText, at: (Int32(midPoint), row))
-            }
-            
+            let command = commands[i]
+            let shortName = command.shortName ?? ""
+            let nameWithShort = shortName.isEmpty ? command.name : "\(command.name) (\(shortName))"
+            let commandText = ":\(nameWithShort)"
+            contentPlane.putString(commandText, at: (0, row))
             row += 1
         }
         
         // Footer
-        row += 2
+        row += 1
         contentPlane.putString("Type :help or :h in command mode to open this help page", at: (0, row))
         row += 1
         contentPlane.putString("Press ESC to close this help page", at: (0, row))

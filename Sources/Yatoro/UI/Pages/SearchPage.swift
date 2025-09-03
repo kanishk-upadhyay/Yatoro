@@ -1,27 +1,116 @@
 import Foundation
-import MusicKit
+import Logging
 import SwiftNotCurses
+import MusicKit
 
 @MainActor
 public class SearchPage: DestroyablePage {
 
-    private let stdPlane: Plane
-
-    private let plane: Plane
-    private let pageNamePlane: Plane
-    private let borderPlane: Plane
-    private let searchPhrasePlane: Plane
-    private let itemIndicesPlane: Plane
-
-    public static var searchPageQueue: SearchPageQueue?
-
     private var state: PageState
-
     private var lastSearchTime: Date
     private var searchCache: [Page]
 
     private var maxItemsDisplayed: Int {
-        (Int(self.state.height) - 7) / 5
+        Int(contentPlane.height) - 2
+    }
+
+    @MainActor
+    public static var searchPageQueue: SearchPageQueue? = nil
+
+    private let stdPlane: Plane
+    private let plane: Plane
+    private let pageNamePlane: Plane
+    private let borderPlane: Plane
+    private let contentPlane: Plane
+    private let itemIndicesPlane: Plane
+
+    public init?(stdPlane: Plane, state: PageState) {
+        self.stdPlane = stdPlane
+        self.state = state
+        self.searchCache = []
+        self.lastSearchTime = .now
+
+        guard
+            let plane = Plane(
+                in: stdPlane,
+                opts: .init(
+                    x: 30,
+                    y: 0,
+                    width: state.width,
+                    height: state.height - 3,
+                    debugID: "SEARCH_PAGE"
+                )
+            )
+        else {
+            return nil
+        }
+        self.plane = plane
+
+        guard
+            let borderPlane = Plane(
+                in: plane,
+                state: .init(
+                    absX: 0,
+                    absY: 0,
+                    width: state.width,
+                    height: state.height
+                ),
+                debugID: "SEARCH_BORDER"
+            )
+        else {
+            return nil
+        }
+        self.borderPlane = borderPlane
+
+        guard
+            let contentPlane = Plane(
+                in: plane,
+                state: .init(
+                    absX: 2,
+                    absY: 1,
+                    width: state.width - 3,
+                    height: state.height - 4
+                ),
+                debugID: "SEARCH_CONTENT"
+            )
+        else {
+            return nil
+        }
+        self.contentPlane = contentPlane
+
+        guard
+            let pageNamePlane = Plane(
+                in: plane,
+                state: .init(
+                    absX: 2,
+                    absY: 0,
+                    width: 6,
+                    height: 1
+                ),
+                debugID: "SEARCH_PAGE_NAME"
+            )
+        else {
+            return nil
+        }
+        self.pageNamePlane = pageNamePlane
+
+        guard
+            let itemIndicesPlane = Plane(
+                in: plane,
+                state: .init(
+                    absX: 1,
+                    absY: 1,
+                    width: 1,
+                    height: state.height - 2
+                ),
+                debugID: "SEARCH_II"
+            )
+        else {
+            return nil
+        }
+        self.itemIndicesPlane = itemIndicesPlane
+
+        updateColors()
     }
 
     public func onResize(newPageState: PageState) async {
@@ -56,95 +145,11 @@ public class SearchPage: DestroyablePage {
 
     public func getMinDimensions() async -> (width: UInt32, height: UInt32) { (23, 17) }
 
-    public init?(stdPlane: Plane, state: PageState) {
-        self.stdPlane = stdPlane
-        self.state = state
-        guard
-            let plane = Plane(
-                in: stdPlane,
-                opts: .init(
-                    x: 30,
-                    y: 0,
-                    width: state.width,
-                    height: state.height - 3,
-                    debugID: "SEARCH_PAGE"
-                )
-            )
-        else {
-            return nil
-        }
-        self.plane = plane
-
-        guard
-            let borderPlane = Plane(
-                in: plane,
-                state: .init(
-                    absX: 0,
-                    absY: 0,
-                    width: state.width,
-                    height: state.height
-                ),
-                debugID: "SEARCH_BORDER"
-            )
-        else {
-            return nil
-        }
-        self.borderPlane = borderPlane
-
-        guard
-            let searchPhrasePlane = Plane(
-                in: plane,
-                state: .init(absX: 2, absY: 0, width: 1, height: 1),
-                debugID: "SEARCH_SP"
-            )
-        else {
-            return nil
-        }
-        self.searchPhrasePlane = searchPhrasePlane
-
-        guard
-            let pageNamePlane = Plane(
-                in: plane,
-                state: .init(
-                    absX: 2,
-                    absY: 0,
-                    width: 6,
-                    height: 1
-                ),
-                debugID: "SEARCH_PAGE_NAME"
-            )
-        else {
-            return nil
-        }
-        self.pageNamePlane = pageNamePlane
-
-        guard
-            let itemIndicesPlane = Plane(
-                in: plane,
-                state: .init(
-                    absX: 1,
-                    absY: 1,
-                    width: 1,
-                    height: state.height - 2
-                ),
-                debugID: "SEARCH_II"
-            )
-        else {
-            return nil
-        }
-        self.itemIndicesPlane = itemIndicesPlane
-
-        self.searchCache = []
-        self.lastSearchTime = .now
-
-        updateColors()
-    }
-
     public func updateColors() {
         let colorConfig = Theme.shared.search
         plane.setColorPair(colorConfig.page)
         borderPlane.setColorPair(colorConfig.border)
-        searchPhrasePlane.setColorPair(colorConfig.searchPhrase)
+        contentPlane.setColorPair(colorConfig.page)
         pageNamePlane.setColorPair(colorConfig.pageName)
         itemIndicesPlane.setColorPair(colorConfig.itemIndices)
 
@@ -173,8 +178,8 @@ public class SearchPage: DestroyablePage {
             searchCache = []
             pageNamePlane.width = 6
             pageNamePlane.putString("Search", at: (0, 0))
-            searchPhrasePlane.updateByPageState(.init(absX: 2, absY: 0, width: 1, height: 1))
-            searchPhrasePlane.erase()
+            contentPlane.updateByPageState(.init(absX: 2, absY: 0, width: 1, height: 1))
+            contentPlane.erase()
             itemIndicesPlane.erase()
             while SearchPage.searchPageQueue.size() > 0 {
                 await SearchPage.searchPageQueue?.page?.destroy()
@@ -208,15 +213,15 @@ public class SearchPage: DestroyablePage {
 
                 pageNamePlane.width = 15
                 pageNamePlane.putString("Recently Played", at: (0, 0))
-                searchPhrasePlane.updateByPageState(.init(absX: 2, absY: 0, width: 1, height: 1))
-                searchPhrasePlane.erase()
+                contentPlane.updateByPageState(.init(absX: 2, absY: 0, width: 1, height: 1))
+                contentPlane.erase()
 
                 await update(result: searchResult)
             case .recommended:
                 pageNamePlane.width = 11
                 pageNamePlane.putString("Recommended", at: (0, 0))
-                searchPhrasePlane.updateByPageState(.init(absX: 2, absY: 0, width: 1, height: 1))
-                searchPhrasePlane.erase()
+                contentPlane.updateByPageState(.init(absX: 2, absY: 0, width: 1, height: 1))
+                contentPlane.erase()
 
                 await update(result: searchResult)
 
@@ -245,7 +250,7 @@ public class SearchPage: DestroyablePage {
                     UInt32(searchPhrase.count),
                     self.state.width - pageNamePlane.width - 4
                 )
-                searchPhrasePlane.updateByPageState(
+                contentPlane.updateByPageState(
                     .init(
                         absX: Int32(pageNamePlane.width) + 3,
                         absY: 0,
@@ -253,7 +258,7 @@ public class SearchPage: DestroyablePage {
                         height: 1
                     )
                 )
-                searchPhrasePlane.putString(searchPhrase, at: (0, 0))
+                contentPlane.putString(searchPhrase, at: (0, 0))
 
                 await update(result: searchResult)
 
@@ -278,7 +283,7 @@ public class SearchPage: DestroyablePage {
                     pageNamePlane.width = 17
                     pageNamePlane.putString("Library stations:", at: (0, 0))
                 }
-                searchPhrasePlane.updateByPageState(
+                contentPlane.updateByPageState(
                     .init(
                         absX: Int32(pageNamePlane.width) + 3,
                         absY: 0,
@@ -286,7 +291,7 @@ public class SearchPage: DestroyablePage {
                         height: 1
                     )
                 )
-                searchPhrasePlane.putString(searchPhrase, at: (0, 0))
+                contentPlane.putString(searchPhrase, at: (0, 0))
 
                 await update(result: searchResult)
             }
@@ -330,8 +335,8 @@ public class SearchPage: DestroyablePage {
                 let name = playlistDescription.playlist.name
                 pageNamePlane.width = UInt32(name.count)
                 pageNamePlane.putString(name, at: (0, 0))
-                searchPhrasePlane.updateByPageState(.init(absX: 2, absY: 0, width: 1, height: 1))
-                searchPhrasePlane.erase()
+                contentPlane.updateByPageState(.init(absX: 2, absY: 0, width: 1, height: 1))
+                contentPlane.erase()
 
                 SearchPage.searchPageQueue = .init(SearchPage.searchPageQueue, page: nil, type: result)
 
@@ -384,8 +389,8 @@ public class SearchPage: DestroyablePage {
             )
             SearchPage.searchPageQueue = .init(SearchPage.searchPageQueue, page: recommendationDetailPage, type: result)
 
-        case .help:
-            let helpPage = HelpPage(
+         case .help:
+            if let helpPage = HelpPage(
                 stdPlane: stdPlane,
                 state: .init(
                     absX: 5,
@@ -393,18 +398,18 @@ public class SearchPage: DestroyablePage {
                     width: stdPlane.width - 10,
                     height: stdPlane.height - 6
                 )
-            )
-            SearchPage.searchPageQueue = .init(SearchPage.searchPageQueue, page: helpPage, type: result)
-
+            ) {
+                SearchPage.searchPageQueue = .init(SearchPage.searchPageQueue, page: helpPage, type: result)
+            }
+        
         }
-
     }
 
     private func update(result: SearchResult) async {
         guard searchCache.isEmpty || lastSearchTime != result.timestamp else {
             return
         }
-        logger?.debug("Search UI update.")
+        await logger?.debug("Search UI update.")
 
         itemIndicesPlane.erase()
         for case let item as DestroyablePage in searchCache {
@@ -624,15 +629,14 @@ public class SearchPage: DestroyablePage {
         }
 
         var queue = SearchPage.searchPageQueue
-        while queue != nil {
-            await queue?.page?.destroy()
-            queue = queue?.previous
+        while let current = queue {
+            await current.page?.destroy()
+            queue = current.previous
         }
     }
-
 }
 
-public class SearchPageQueue {
+public class SearchPageQueue: @unchecked Sendable {
     let previous: SearchPageQueue?
     let page: DestroyablePage?
     let type: OpenedResult

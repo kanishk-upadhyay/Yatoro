@@ -1,3 +1,4 @@
+import Foundation
 import SwiftNotCurses
 
 @MainActor
@@ -100,13 +101,9 @@ public class ArtistDetailPage: DestroyablePage {
         self.albumItemPages = []
 
         loadTopSongs()
-
         loadAlbums()
-
         loadArtwork()
-
         updateColors()
-
     }
 
     private func loadTopSongs() {
@@ -114,30 +111,21 @@ public class ArtistDetailPage: DestroyablePage {
             return
         }
         let oneThirdWidth = Int32(state.width) / 3
-        self.topSongsTitlePlane = Plane(
-            in: plane,
-            state: .init(
-                absX: oneThirdWidth + 2,
-                absY: 2,
-                width: 10,
-                height: 1
-            ),
+        self.topSongsTitlePlane = createPlane(
+            absX: oneThirdWidth + 2,
+            absY: 2,
+            width: 10,
+            height: 1,
             debugID: "ARDPTST"
         )
-        self.topSongsIndicesPlane = Plane(
-            in: plane,
-            state: .init(
-                absX: oneThirdWidth + 2,
-                absY: 4,
-                width: 2,
-                height: 5 * UInt32(min(topSongs.count, maxAmountOfItemsDisplayed + 1))
-            ),
+        self.topSongsIndicesPlane = createPlane(
+            absX: oneThirdWidth + 2,
+            absY: 4,
+            width: 2,
+            height: 5 * UInt32(min(topSongs.count, maxAmountOfItemsDisplayed + 1)),
             debugID: "ARDPTSI"
         )
-        for topSongIndex in 0..<topSongs.count {
-            if maxAmountOfItemsDisplayed < topSongIndex {
-                break
-            }
+        for topSongIndex in 0..<min(topSongs.count, maxAmountOfItemsDisplayed) {
             Task {
                 let topSongItem = SongItemPage(
                     in: borderPlane,
@@ -160,30 +148,21 @@ public class ArtistDetailPage: DestroyablePage {
             return
         }
         let twoThirdsWidth = Int32(state.width) / 3 * 2
-        self.albumsTitlePlane = Plane(
-            in: plane,
-            state: .init(
-                absX: twoThirdsWidth + 2,
-                absY: 2,
-                width: 7,
-                height: 1
-            ),
+        self.albumsTitlePlane = createPlane(
+            absX: twoThirdsWidth + 2,
+            absY: 2,
+            width: 7,
+            height: 1,
             debugID: "ARDPAT"
         )
-        self.albumsIndicesPlane = Plane(
-            in: plane,
-            state: .init(
-                absX: twoThirdsWidth + 2,
-                absY: 4,
-                width: 2,
-                height: 5 * UInt32(min(albums.count, maxAmountOfItemsDisplayed + 1))
-            ),
+        self.albumsIndicesPlane = createPlane(
+            absX: twoThirdsWidth + 2,
+            absY: 4,
+            width: 2,
+            height: 5 * UInt32(min(albums.count, maxAmountOfItemsDisplayed + 1)),
             debugID: "ARDPAI"
         )
-        for albumIndex in 0..<albums.count {
-            if maxAmountOfItemsDisplayed < albumIndex {
-                break
-            }
+        for albumIndex in 0..<min(albums.count, maxAmountOfItemsDisplayed) {
             Task {
                 let albumItem = AlbumItemPage(
                     in: borderPlane,
@@ -199,6 +178,14 @@ public class ArtistDetailPage: DestroyablePage {
                 self.albumItemPages.append(albumItem)
             }
         }
+    }
+
+    private func createPlane(absX: Int32, absY: Int32, width: UInt32, height: UInt32, debugID: String) -> Plane? {
+        return Plane(
+            in: plane,
+            state: .init(absX: absX, absY: absY, width: width, height: height),
+            debugID: debugID
+        )
     }
 
     private func loadArtwork() {
@@ -230,7 +217,7 @@ public class ArtistDetailPage: DestroyablePage {
     func handleArtwork(pixelArray: [UInt8]) {
         let artworkPlaneWidth = state.width / 3 - 5
         let artworkPlaneHeight = artworkPlaneWidth / 2 - 1
-        if artworkPlaneHeight > self.state.height - 12 {  // TODO: fix
+        if artworkPlaneHeight > self.state.height - 12 {
             self.artworkVisual?.destroy()
             self.artworkPlane.updateByPageState(
                 .init(
@@ -317,10 +304,7 @@ public class ArtistDetailPage: DestroyablePage {
 
         self.albumsIndicesPlane?.setColorPair(colorConfig.albumIndices)
         if let albums = artistDescription.lastAlbums, !albums.isEmpty {
-            for albumIndex in 0..<albums.count {
-                if maxAmountOfItemsDisplayed < albumIndex {
-                    break
-                }
+            for albumIndex in 0..<min(albums.count, maxAmountOfItemsDisplayed) {
                 self.albumsIndicesPlane?.putString("a\(albumIndex)", at: (0, 2 + Int32(albumIndex * 5)))
             }
         }
@@ -330,10 +314,7 @@ public class ArtistDetailPage: DestroyablePage {
 
         self.topSongsIndicesPlane?.setColorPair(colorConfig.topSongIndices)
         if let songs = artistDescription.topSongs, !songs.isEmpty {
-            for songIndex in 0..<songs.count {
-                // if maxAmountOfItemsDisplayed < songIndex {
-                //     break
-                // }
+            for songIndex in 0..<min(songs.count, maxAmountOfItemsDisplayed) {
                 self.topSongsIndicesPlane?.putString("t\(songIndex)", at: (0, 2 + Int32(songIndex * 5)))
             }
         }

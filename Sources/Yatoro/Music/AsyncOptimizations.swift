@@ -1,31 +1,28 @@
 import Foundation
-@preconcurrency import MusicKit
 
-/// Async utilities for better concurrency handling
-public struct AsyncUtilities: Sendable {
+/// Async utilities for better concurrency handling  
+public enum AsyncUtilities {
     
     /// Execute multiple async operations concurrently and return when all complete
-    public static func concurrent<T: Sendable>(
-        _ operations: [@Sendable () async throws -> T]
-    ) async throws -> [T] {
-        return try await withThrowingTaskGroup(of: T.self) { group in
+    public static func concurrent<T: Sendable>(_ operations: [@Sendable () async -> T]) async -> [T] {
+        return await withTaskGroup(of: T.self) { group in
             for operation in operations {
                 group.addTask {
-                    try await operation()
+                    await operation()
                 }
             }
             
             var results: [T] = []
-            for try await result in group {
+            for await result in group {
                 results.append(result)
             }
             return results
         }
     }
     
-    /// Execute async operations with timeout
+    /// Execute operations with timeout
     public static func withTimeout<T: Sendable>(
-        seconds: TimeInterval,
+        seconds: Double,
         operation: @escaping @Sendable () async throws -> T
     ) async throws -> T {
         return try await withThrowingTaskGroup(of: T.self) { group in
@@ -35,146 +32,14 @@ public struct AsyncUtilities: Sendable {
             
             group.addTask {
                 try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw YatoroError.networkError("Operation timed out after \(seconds) seconds")
+                throw YatoroError.commandNotFound("Operation timed out after \(seconds) seconds")
             }
             
             guard let result = try await group.next() else {
-                throw YatoroError.networkError("No result from async operation")
+                throw YatoroError.invalidArguments("No result returned")
             }
-            
             group.cancelAll()
             return result
-        }
-    }
-    
-    /// Retry an async operation with exponential backoff
-    public static func withRetry<T: Sendable>(
-        maxRetries: Int = 3,
-        baseDelay: TimeInterval = 1.0,
-        operation: @escaping @Sendable () async throws -> T
-    ) async throws -> T {
-        var lastError: Error?
-        
-        for attempt in 0..<maxRetries {
-            do {
-                return try await operation()
-            } catch {
-                lastError = error
-                
-                if attempt < maxRetries - 1 {
-                    let delay = baseDelay * pow(2.0, Double(attempt))
-                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                }
-            }
-        }
-        
-        throw lastError ?? YatoroError.unknown("Retry failed without error")
-    }
-    
-    /// Debounce async operations
-    public static func debounced<T: Sendable>(
-        delay: TimeInterval,
-        operation: @escaping @Sendable () async throws -> T
-    ) -> @Sendable () async throws -> T {
-        let currentTask = CurrentValueActor<Task<T, Error>?>(nil)
-        
-        return {
-            await currentTask.setValue(nil) // Cancel previous task
-            
-            let newTask = Task<T, Error> {
-                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                return try await operation()
-            }
-            
-            await currentTask.setValue(newTask)
-            return try await newTask.value
-        }
-    }
-}
-
-// MARK: - Enhanced Async Optimizations (ported from AsyncOptimizationsClean)
-
-extension AsyncOptimizations {
-    /// Concurrent processing utilities
-    public enum AsyncUtilities {
-        /// Execute multiple async operations concurrently
-        public static func concurrent<T>(_ operations: [() async throws -> T]) async throws -> [T] {
-            return try await withThrowingTaskGroup(of: T.self) { group in
-                for operation in operations {
-                    group.addTask {
-                        try await operation()
-                    }
-                }
-                
-                var results: [T] = []
-                for try await result in group {
-                    results.append(result)
-                }
-                return results
-            }
-        }
-        
-        /// Execute operations with a timeout
-        public static func withTimeout<T>(
-            _ timeout: TimeInterval,
-            operation: @escaping () async throws -> T
-        ) async throws -> T {
-            return try await withThrowingTaskGroup(of: T.self) { group in
-                group.addTask {
-                    try await operation()
-                }
-                
-                group.addTask {
-                    try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                    throw TimeoutError()
-                }
-                
-                guard let result = try await group.next() else {
-                    throw TimeoutError()
-                }
-                group.cancelAll()
-                return result
-            }
-        }
-    }
-    
-    /// Timeout error for async operations
-    public struct TimeoutError: Error {
-        public let message = "Operation timed out"
-    }
-    
-    /// Async artwork processing with caching
-    public class AsyncArtworkProcessor {
-        public static let shared = AsyncArtworkProcessor()
-        
-        private init() {}
-        
-        public func processArtwork(from urlString: String) async throws -> ProcessedArtwork? {
-            // Check cache first
-            if let cachedArtwork = await ArtworkCache.shared.getCachedArtwork(urlString) {
-                return cachedArtwork
-            }
-            
-            guard let url = URL(string: urlString) else { return nil }
-            
-            let (data, _) = try await URLSession.shared.data(from: url)
-            
-            let processedArtwork = ProcessedArtwork(
-                data: data,
-                processedAt: Date(),
-                size: CGSize(width: 300, height: 300)
-            )
-            
-            await ArtworkCache.shared.cacheArtwork(urlString, artwork: processedArtwork)
-            return processedArtwork
-        }
-        
-        public func preloadArtwork(urls: [String]) async {
-            let loadOperations = urls.map { url in
-                { try await self.processArtwork(from: url) }
-            }
-            
-            _ = try? await AsyncUtilities.concurrent(loadOperations)
         }
     }
 }
@@ -188,7 +53,7 @@ private actor CurrentValueActor<T> {
     }
     
     func setValue(_ newValue: T) {
-        if let task = value as? Task<Any, Error> {
+        if let task = value as? Task<Void, Error> {
             task.cancel()
         }
         value = newValue
@@ -200,7 +65,7 @@ private actor CurrentValueActor<T> {
 }
 
 /// Basic artwork loader
-public class BasicArtworkLoader: Sendable {
+public actor BasicArtworkLoader {
     private let urlSession: URLSession
     
     public init() {
@@ -211,8 +76,11 @@ public class BasicArtworkLoader: Sendable {
         let urlString = url.absoluteString
         
         // Check cache first
-        if let cachedArtwork = await ArtworkCache.shared.getCachedArtwork(urlString) {
-            return cachedArtwork.data
+        let cachedData = await MainActor.run {
+            ArtworkCache.shared.getCachedArtwork(urlString)?.data
+        }
+        if let cachedData = cachedData {
+            return cachedData
         }
         
         // Load from network
@@ -225,18 +93,20 @@ public class BasicArtworkLoader: Sendable {
             size: CGSize(width: 300, height: 300)
         )
         
-        await ArtworkCache.shared.cacheArtwork(urlString, artwork: processedArtwork)
+        await MainActor.run {
+            ArtworkCache.shared.cacheArtwork(urlString, artwork: processedArtwork)
+        }
         return data
     }
     
     public func preloadArtworks(urls: [URL]) async {
-        let loadOperations = urls.map { url in
+        let loadOperations: [@Sendable () async -> Void] = urls.map { url in
             { [weak self] in
-                try? await self?.loadArtwork(from: url)
-            }
+                _ = try? await self?.loadArtwork(from: url)
+            } as @Sendable () async -> Void
         }
         
         // Execute all loads concurrently
-        _ = try? await AsyncUtilities.concurrent(loadOperations)
+        _ = await AsyncUtilities.concurrent(loadOperations)
     }
 }

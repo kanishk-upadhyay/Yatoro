@@ -118,11 +118,11 @@ public struct InputValidator {
         let sanitized = InputSanitizer.sanitizeSearchQuery(query)
         
         guard !sanitized.isEmpty else {
-            return .failure(.validationError("Search query cannot be empty"))
+            return .failure(.invalidArguments("Search query cannot be empty"))
         }
         
         guard sanitized.count >= 2 else {
-            return .failure(.validationError("Search query must be at least 2 characters"))
+            return .failure(.invalidArguments("Search query must be at least 2 characters"))
         }
         
         return .success(sanitized)
@@ -132,11 +132,11 @@ public struct InputValidator {
     public static func validateNumericRange(_ input: String, min: Double, max: Double) -> Result<Double, YatoroError> {
         guard let sanitized = InputSanitizer.sanitizeNumericInput(input),
               let value = Double(sanitized) else {
-            return .failure(.validationError("Invalid numeric input: '\(input)'"))
+            return .failure(.invalidArguments("Invalid numeric input: '\(input)'"))
         }
         
         guard value >= min && value <= max else {
-            return .failure(.validationError("Value \(value) is outside allowed range [\(min), \(max)]"))
+            return .failure(.invalidArguments("Value \(value) is outside allowed range [\(min), \(max)]"))
         }
         
         return .success(value)
@@ -147,14 +147,14 @@ public struct InputValidator {
         let sanitized = InputSanitizer.sanitizeFilePath(path)
         
         guard !sanitized.isEmpty else {
-            return .failure(.validationError("File path cannot be empty"))
+            return .failure(.invalidArguments("File path cannot be empty"))
         }
         
         // Check for obviously invalid patterns
         let invalidPatterns = ["//", "\\\\", ".."]
         for pattern in invalidPatterns {
             if sanitized.contains(pattern) {
-                return .failure(.validationError("Invalid characters in file path"))
+                return .failure(.invalidArguments("Invalid characters in file path"))
             }
         }
         
