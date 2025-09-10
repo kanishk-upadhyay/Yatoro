@@ -1,7 +1,10 @@
 import SwiftNotCurses
+import MusicKit
 
 @MainActor
 public class SongDetailPage: DestroyablePage {
+
+    private let maxLyricsDisplayHeight: UInt32 = 6
 
     private var state: PageState
 
@@ -22,6 +25,11 @@ public class SongDetailPage: DestroyablePage {
     private var albumItemPage: AlbumItemPage?
     private var albumTitlePlane: Plane?  // "Album:"
     private var albumIndexPlane: Plane?
+
+    // Lyrics display
+    private var lyricsPlane: Plane?
+    private var lyricsTitlePlane: Plane?
+    private var lyrics: String?
 
     private var maxItemsDisplayed: Int {
         Int(state.height - 8) / 5
@@ -128,6 +136,8 @@ public class SongDetailPage: DestroyablePage {
         loadAlbum()
 
         loadArtwork()
+
+        loadLyrics()
 
         updateColors()
 
@@ -256,6 +266,69 @@ public class SongDetailPage: DestroyablePage {
         self.artworkVisual?.render()
     }
 
+    private func loadLyrics() {
+        Task {
+            if let lyricsText = await LyricsManager.shared.fetchLyrics(for: songDescription.song) {
+                await logger?.debug("SongDetailPage: Successfully fetched lyrics for '\(songDescription.song.title)'")
+                await self.handleLyrics(lyricsText: lyricsText)
+            } else {
+                await logger?.debug("SongDetailPage: No lyrics available for '\(songDescription.song.title)'")
+            }
+        }
+    }
+
+    @MainActor
+    private func handleLyrics(lyricsText: String) {
+        self.lyrics = lyricsText
+        
+        // Create lyrics title plane
+        let lyricsStartY = Int32(state.height) - 8
+        self.lyricsTitlePlane = Plane(
+            in: plane,
+            state: .init(
+                absX: 4,
+                absY: lyricsStartY,
+                width: 7,
+                height: 1
+            ),
+            debugID: "SDPLT"
+        )
+        
+        // Create lyrics content plane (limited height for now)
+        // Create lyrics content plane (limited height for now)
+        let lyricsHeight = min(maxLyricsDisplayHeight, UInt32(lyricsText.split(separator: "\n").count))
+        self.lyricsPlane = Plane(
+            in: plane,
+            state: .init(
+                absX: 4,
+                absY: lyricsStartY + 1,
+                width: state.width - 8,
+                height: lyricsHeight
+            ),
+            debugID: "SDPLP"
+        )
+    }
+
+    private func updateLyricsDisplay() {
+        guard let lyrics = lyrics,
+              let lyricsTitlePlane = lyricsTitlePlane,
+              let lyricsPlane = lyricsPlane else {
+            return
+        }
+        
+        // Display lyrics title
+        lyricsTitlePlane.putString("Lyrics:", at: (0, 0))
+        
+        // Display lyrics content (first few lines)
+        let lyricsLines = lyrics.split(separator: "\n")
+        let maxLines = min(Int(lyricsPlane.height), lyricsLines.count)
+        
+        for (index, line) in lyricsLines.prefix(maxLines).enumerated() {
+            let truncatedLine = String(line.prefix(Int(lyricsPlane.width - 2)))
+            lyricsPlane.putString(truncatedLine, at: (0, Int32(index)))
+        }
+    }
+
     public func destroy() async {
         self.plane.erase()
         self.plane.destroy()
@@ -282,6 +355,12 @@ public class SongDetailPage: DestroyablePage {
 
         self.artistsIndicesPlane?.erase()
         self.artistsIndicesPlane?.destroy()
+
+        self.lyricsTitlePlane?.erase()
+        self.lyricsTitlePlane?.destroy()
+
+        self.lyricsPlane?.erase()
+        self.lyricsPlane?.destroy()
 
         await self.albumItemPage?.destroy()
         for artistPage in self.artistItemPages {
@@ -327,6 +406,13 @@ public class SongDetailPage: DestroyablePage {
         self.albumItemPage?.updateColors()
         for page in artistItemPages {
             page?.updateColors()
+        }
+
+        // Update lyrics display colors
+        if lyrics != nil {
+            self.lyricsTitlePlane?.setColorPair(colorConfig.artistsText) // Reuse existing color config
+            self.lyricsPlane?.setColorPair(colorConfig.page)
+            updateLyricsDisplay()
         }
     }
 

@@ -40,6 +40,7 @@ public struct Command: Sendable {
         .init(name: "open", short: "o", action: .open),
         .init(name: "close", short: "c", action: .close),
         .init(name: "closeAll", short: "ca", action: .closeAll),
+        .init(name: "lyrics", short: "ly", action: .lyrics),
     ]
 
     @MainActor
@@ -119,6 +120,8 @@ public struct Command: Sendable {
         case .closeAll:
             SearchManager.shared.lastSearchResult = nil
 
+        case .lyrics: await LyricsCommand.execute(arguments: arguments)
+
         }
         return
     }
@@ -147,4 +150,5 @@ public enum CommandAction: String, Sendable, Codable {
     case open
     case close
     case closeAll
+    case lyrics
 }
