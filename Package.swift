@@ -1,0 +1,60 @@
+// swift-tools-version: 6.0
+// The swift-tools-version declares the minimum version of Swift required to build this package.
+
+import PackageDescription
+
+let package = Package(
+    name: "Yatoro",
+    platforms: [.macOS("14.0")],
+    dependencies: [
+        .package(
+            url: "https://github.com/jayadamsmorgan/swift-argument-parser.git",
+            branch: "1.5.0-publicError"
+        ),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.6.1"),
+        .package(url: "https://github.com/jpsim/Yams.git", from: "5.1.3"),
+        .package(url: "https://github.com/LebJe/TOMLKit.git", from: "0.6.0"),
+
+    ],
+    targets: [
+        .systemLibrary(
+            name: "notcurses",
+            pkgConfig: "notcurses",
+            providers: [
+                .apt(["notcurses"]),
+                .brew(["notcurses"]),
+            ]
+        ),
+        .target(
+            name: "SwiftNotCurses",
+            dependencies: ["notcurses"]
+        ),
+        .executableTarget(
+            name: "yatoro",
+            dependencies: [
+                .product(
+                    name: "ArgumentParser",
+                    package: "swift-argument-parser"
+                ),
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "Yams", package: "Yams"),
+                .product(name: "TOMLKit", package: "TOMLKit"),
+                "SwiftNotCurses",
+            ],
+            path: "Sources/Yatoro",
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-sectcreate",
+                    "-Xlinker", "__TEXT",
+                    "-Xlinker", "__info_plist",
+                    "-Xlinker", "Resources/Info.plist",
+                ])
+            ],
+
+        ),
+        .testTarget(
+            name: "YatoroTests",
+            dependencies: ["yatoro"]
+        ),
+    ]
+)
