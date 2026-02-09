@@ -387,12 +387,7 @@ public class SearchPage: DestroyablePage {
         case .help:
             let helpPage = HelpPage(
                 stdPlane: stdPlane,
-                state: .init(
-                    absX: 5,
-                    absY: 2,
-                    width: stdPlane.width - 10,
-                    height: stdPlane.height - 6
-                )
+                state: HelpPage.layout(forParent: .init(absX: 0, absY: 0, width: stdPlane.width, height: stdPlane.height))
             )
             SearchPage.searchPageQueue = .init(SearchPage.searchPageQueue, page: helpPage, type: result)
 

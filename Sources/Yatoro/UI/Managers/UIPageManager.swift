@@ -208,6 +208,18 @@ public struct UIPageManager {
                 height: newHeight
             )
         )
+        
+        // Resize HelpPage if active
+        if let helpPage = HelpPage.active {
+            await helpPage.resizeToParent(
+                .init(
+                    absX: 0,
+                    absY: 0,
+                    width: newWidth,
+                    height: newHeight
+                )
+            )
+        }
     }
 
     public func onQuit() async {

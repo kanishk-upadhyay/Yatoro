@@ -151,12 +151,15 @@ public class SearchManager: @unchecked Sendable {
     }
 
     public func showHelp() {
+        if case .help = lastSearchResult?.result {
+            return
+        }
         self.lastSearchResult = ResultNode(previous: lastSearchResult, .help, inPlace: false)
     }
 
 }
 
-// Requesting
+// MARK: - Requesting
 public extension SearchManager {
 
     func getRecentlyPlayed<T>(
