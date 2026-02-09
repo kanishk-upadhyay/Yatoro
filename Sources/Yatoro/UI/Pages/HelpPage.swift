@@ -68,7 +68,8 @@ public class HelpPage: DestroyablePage {
     public func onResize(newPageState: PageState) async {
         self.state = newPageState
         
-        guard state.width > HelpPage.minPageWidth, state.height > HelpPage.minPageHeight else {
+        guard state.width >= UInt32(HelpPage.minPageWidth),
+              state.height >= UInt32(HelpPage.minPageHeight) else {
             return
         }
         
