@@ -110,16 +110,6 @@ public class HelpPage: DestroyablePage {
         renderHelpContent()
     }
     
-    // MARK: - Input Handling
-    public func handleInput(_ input: Input) async -> Bool {
-        // Only allow closing via ESC or q
-        if input.id == 27 || input.utf8 == "q" {
-             await self.destroy()
-             return true
-        }
-        return false
-    }
-
     public func getMinDimensions() async -> (width: UInt32, height: UInt32) { (50, 20) }
 
     public func getMaxDimensions() async -> (width: UInt32, height: UInt32)? { nil }
